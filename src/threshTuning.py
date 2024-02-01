@@ -16,6 +16,10 @@ cv2.createTrackbar('HMax','image',0,179,nothing)
 cv2.createTrackbar('SMax','image',0,255,nothing)
 cv2.createTrackbar('VMax','image',0,255,nothing)
 
+# fix trackbar, currently does nothing
+cv2.createTrackbar('Mask Height','image',0,100,nothing)
+
+
 # Set default value for MAX HSV trackbars.
 
 # Left side line
@@ -30,6 +34,8 @@ cv2.setTrackbarPos('SMax', 'image', 26)
 cv2.setTrackbarPos('VMax', 'image', 255)
 
 cv2.setTrackbarPos('VMin', 'image', 158)
+cv2.setTrackbarPos('Mask Height', 'image', 70)
+
 
 # Initialize to check if HSV min/max value changes
 hMin = sMin = vMin = hMax = sMax = vMax = 0
@@ -38,6 +44,7 @@ phMin = psMin = pvMin = phMax = psMax = pvMax = 0
 img = cv2.imread('img.jpg')
 output = img
 waitTime = 33
+height = 0
 
 while(1):
 
@@ -49,6 +56,9 @@ while(1):
     hMax = cv2.getTrackbarPos('HMax','image')
     sMax = cv2.getTrackbarPos('SMax','image')
     vMax = cv2.getTrackbarPos('VMax','image')
+
+    # height = cv2.getTrackbarPos('Height Max','image')
+    height = 0.7
 
     # Set minimum and max HSV values to display
     lower = np.array([hMin, sMin, vMin])
@@ -92,9 +102,15 @@ while(1):
     ignore_mask_color = (255,255,255)
     rows, cols = cv_image.shape[:2]
     bottom_left  = [cols * 0, rows * 1]
-    top_left     = [cols * 0, rows * 0.6735]
+    top_left     = [cols * 0, rows * height]
     bottom_right = [cols * 1, rows * 1 ]
-    top_right    = [cols * 1, rows * 0.6735]
+    top_right    = [cols * 1, rows * height]
+
+    # smaller mask
+    # top_left     = [cols * 0, rows * 0.7]
+    # top_right    = [cols * 1, rows * 0.7]
+
+
     vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
     # filling the polygon with white color and generating the final mask
     cv2.fillPoly(blank_mask, vertices, ignore_mask_color)
@@ -136,15 +152,35 @@ while(1):
                 cv2.rectangle(cv_image, (x,y), (x+w,y+h), (0,0,255), 1)
     
     cpy_img = output.copy()
+    cpy_img_rt = output.copy()
+    cpy_img_circle = output.copy()
+
     if len(mask_contours) >=1:
-            cv2.drawContours(cpy_img, mask_contours, -1, (0,255,0), 5)
-            for contour in contours_canny:
-                if cv2.contourArea(contour) > 50:
+            cv2.drawContours(cpy_img, mask_contours, -1, (255,255,0), 5)
+            # contour_max_left = 
+            # max_left, max_right = 
+            for contour in mask_contours:
+                
+                if cv2.contourArea(contour) > 150:
+                    
+                    rect = cv2.minAreaRect(contour)
+                    box = cv2.boxPoints(rect)
+                    box = np.int0(box)
+                    cv2.drawContours(cpy_img_rt,[box],0,(0,0,255),2)
+                    
+                    (x,y),radius = cv2.minEnclosingCircle(contour)
+                    center = (int(x),int(y))
+                    radius = int(radius)
+                    cv2.circle(cpy_img_circle,center,radius,(255,0,0),2)
+
                     print(cv2.contourArea(contour))
                 
                     x,y,w,h = cv2.boundingRect(contour)
                     print("X: " , x , "\tY: ", y, "\tW: " , w ,"\tH: ", h)
                     cv2.rectangle(cpy_img, (x,y), (x+w,y+h), (0,0,255), 1)
+
+    # for contour in mask_contours:
+    #     if 
     
     # if len(contours_open) >=1:
     #     cv2.drawContours(opening, contours_open, -1, (0,255,0), 5)
@@ -170,6 +206,10 @@ while(1):
     # cv2.imshow('')
 
     cv2.imshow('canny mask', cpy_img)
+    cv2.imshow('rotate rect mask', cpy_img_rt)
+    cv2.imshow('rotate circle mask', cpy_img_circle)
+
+
 
 
     # Wait longer to prevent freeze for videos.
