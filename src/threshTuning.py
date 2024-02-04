@@ -164,7 +164,7 @@ while(1):
             for contour in mask_contours:
                 if cv2.contourArea(contour) > 150:
                     centroid, dimensions, angle = cv2.minAreaRect(contour)
-                    if (centroid < rows / 2):
+                    if (centroid[0] < rows / 2):
                         left_contours.append(contour)
                     else:
                         right_contours.append(contour)
@@ -196,8 +196,10 @@ while(1):
             for left_contour in left_contours:
                 if(cv2.contourArea(left_contour) > cv2.contourArea(max_left_contour)):
                     max_left_contour = left_contour
-            centroid, dimensions, angle = cv2.minAreaRect(max_left_contour)
-            cv2.circle(cpy_img_rt, (int(centroid[0]), int(centroid[1])), 5, (36,255,12), -1)
+            centroid_left, dimensions_left, angle_left = cv2.minAreaRect(max_left_contour)
+            centroid_right, dimensions_right, angle_right = cv2.minAreaRect(max_right_contour)
+            cv2.circle(cpy_img_rt, (int(centroid_right[0]), int(centroid_right[1])), 5, (36,255,12), -1)
+            cv2.circle(cpy_img_rt, (int(centroid_left[0]), int(centroid_left[1])), 5, (36,255,12), -1)
 
             
 
