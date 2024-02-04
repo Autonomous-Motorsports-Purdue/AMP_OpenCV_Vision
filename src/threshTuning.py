@@ -159,14 +159,24 @@ while(1):
             cv2.drawContours(cpy_img, mask_contours, -1, (255,255,0), 5)
             # contour_max_left = 
             # max_left, max_right = 
+            left_contours = []
+            right_contours = []
             for contour in mask_contours:
-                
                 if cv2.contourArea(contour) > 150:
+                    centroid, dimensions, angle = cv2.minAreaRect(contour)
+                    if (centroid < rows / 2):
+                        left_contours.append(contour)
+                    else:
+                        right_contours.append(contour)
                     
                     rect = cv2.minAreaRect(contour)
                     box = cv2.boxPoints(rect)
                     box = np.int0(box)
                     cv2.drawContours(cpy_img_rt,[box],0,(0,0,255),2)
+
+                    # centroid, dimensions, angle = cv2.minAreaRect(contour)
+                    # cv2.circle(cpy_img_rt, (int(centroid[0]), int(centroid[1])), 5, (36,255,12), -1)
+
                     
                     (x,y),radius = cv2.minEnclosingCircle(contour)
                     center = (int(x),int(y))
@@ -178,6 +188,19 @@ while(1):
                     x,y,w,h = cv2.boundingRect(contour)
                     print("X: " , x , "\tY: ", y, "\tW: " , w ,"\tH: ", h)
                     cv2.rectangle(cpy_img, (x,y), (x+w,y+h), (0,0,255), 1)
+            max_left_contour = left_contours[0]
+            max_right_contour = right_contours[0]
+            for right_contour in right_contours:
+                if(cv2.contourArea(right_contour) > cv2.contourArea(max_right_contour)):
+                    max_right_contour = right_contour
+            for left_contour in left_contours:
+                if(cv2.contourArea(left_contour) > cv2.contourArea(max_left_contour)):
+                    max_left_contour = left_contour
+            centroid, dimensions, angle = cv2.minAreaRect(max_left_contour)
+            cv2.circle(cpy_img_rt, (int(centroid[0]), int(centroid[1])), 5, (36,255,12), -1)
+
+            
+
 
     # for contour in mask_contours:
     #     if 
@@ -195,9 +218,9 @@ while(1):
     # Display output image
     cv2.imshow('image',output)
 
-    cv2.imshow('opening', opening)
-    cv2.imshow('closing', closing)
-    cv2.imshow('open_and_close', open_and_close)
+    # cv2.imshow('opening', opening)
+    # cv2.imshow('closing', closing)
+    # cv2.imshow('open_and_close', open_and_close)
 
     cv2.imshow('canny', cv_image)
     # cv2.imshow('mask_canny', cpy_img)
