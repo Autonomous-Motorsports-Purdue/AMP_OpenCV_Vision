@@ -41,7 +41,9 @@ cv2.setTrackbarPos('Mask Height', 'image', 70)
 hMin = sMin = vMin = hMax = sMax = vMax = 0
 phMin = psMin = pvMin = phMax = psMax = pvMax = 0
 
-img = cv2.imread('img.jpg')
+# img = cv2.imread('img.jpg')
+img = cv2.imread('imgs/img_7.jpg')
+
 output = img
 waitTime = 33
 height = 0
@@ -188,18 +190,25 @@ while(1):
                     x,y,w,h = cv2.boundingRect(contour)
                     print("X: " , x , "\tY: ", y, "\tW: " , w ,"\tH: ", h)
                     cv2.rectangle(cpy_img, (x,y), (x+w,y+h), (0,0,255), 1)
-            max_left_contour = left_contours[0]
-            max_right_contour = right_contours[0]
-            for right_contour in right_contours:
-                if(cv2.contourArea(right_contour) > cv2.contourArea(max_right_contour)):
-                    max_right_contour = right_contour
-            for left_contour in left_contours:
-                if(cv2.contourArea(left_contour) > cv2.contourArea(max_left_contour)):
-                    max_left_contour = left_contour
-            centroid_left, dimensions_left, angle_left = cv2.minAreaRect(max_left_contour)
-            centroid_right, dimensions_right, angle_right = cv2.minAreaRect(max_right_contour)
-            cv2.circle(cpy_img_rt, (int(centroid_right[0]), int(centroid_right[1])), 5, (36,255,12), -1)
-            cv2.circle(cpy_img_rt, (int(centroid_left[0]), int(centroid_left[1])), 5, (36,255,12), -1)
+            if left_contours and right_contours:
+                max_left_contour = left_contours[0]
+                max_right_contour = right_contours[0]
+                for right_contour in right_contours:
+                    if(cv2.contourArea(right_contour) > cv2.contourArea(max_right_contour)):
+                        max_right_contour = right_contour
+                for left_contour in left_contours:
+                    if(cv2.contourArea(left_contour) > cv2.contourArea(max_left_contour)):
+                        max_left_contour = left_contour
+                centroid_left, dimensions_left, angle_left = cv2.minAreaRect(max_left_contour)
+                centroid_right, dimensions_right, angle_right = cv2.minAreaRect(max_right_contour)
+                cv2.circle(cpy_img_rt, (int(centroid_right[0]), int(centroid_right[1])), 5, (36,255,12), -1)
+                cv2.circle(cpy_img_rt, (int(centroid_left[0]), int(centroid_left[1])), 5, (36,255,12), -1)
+                midpoint_x = (centroid_right[0] + centroid_left[0]) / 2
+                midpoint_y = (centroid_right[1] + centroid_left[1]) / 2
+                cv2.circle(cpy_img_rt, ((int(midpoint_x)), int(midpoint_y)), 5, (255,0,0), -1)
+                print("midpoint: " , midpoint_x,",", midpoint_y)
+
+
 
             
 
