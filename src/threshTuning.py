@@ -1,6 +1,7 @@
 import cv2
 import sys
 import numpy as np
+import math
 
 def nothing(x):
     pass
@@ -208,6 +209,13 @@ while(1):
                 cv2.circle(cpy_img_rt, ((int(midpoint_x)), int(midpoint_y)), 5, (255,0,0), -1)
                 print("midpoint: " , midpoint_x,",", midpoint_y)
 
+                # Output vector from midpoint
+                delta_x = midpoint_x - (cols / 2) 
+                delta_y = rows - midpoint_y
+                theta = math.atan(delta_y, delta_x)
+                mag = math.sqrt(math.pow(delta_x, 2) + math.pow(delta_y, 2))
+                print("Angle (rad): ", theta, "Magnitude: ", mag)
+                
 
 
             
