@@ -1,7 +1,7 @@
 import cv2
 import sys
 import numpy as np
-
+from matplotlib import pyplot as plt
 def nothing(x):
     pass
 
@@ -15,6 +15,13 @@ cv2.createTrackbar('VMin','image',0,255,nothing)
 cv2.createTrackbar('HMax','image',0,179,nothing)
 cv2.createTrackbar('SMax','image',0,255,nothing)
 cv2.createTrackbar('VMax','image',0,255,nothing)
+cv2.createTrackbar('blockSizeGaus','image',3,400,lambda x: x if x % 2 == 1 else x + 1)
+cv2.createTrackbar('blockSizeMean','image',3,400,lambda x: x if x % 2 == 1 else x + 1)
+cv2.createTrackbar('constantGaus','image',-255,255,nothing)
+cv2.createTrackbar('constantMean','image',-255,255,nothing)
+
+
+
 
 # fix trackbar, currently does nothing
 cv2.createTrackbar('Height','image',0,100,nothing)
@@ -35,6 +42,8 @@ cv2.setTrackbarPos('VMax', 'image', 255)
 
 cv2.setTrackbarPos('VMin', 'image', 158)
 cv2.setTrackbarPos('Height', 'image', 70)
+cv2.setTrackbarPos('Height', 'image', 70)
+
 
 
 # Initialize to check if HSV min/max value changes
@@ -44,17 +53,122 @@ phMin = psMin = pvMin = phMax = psMax = pvMax = 0
 # img = cv2.imread('img.jpg')
 img = cv2.imread('imgs/img_7.jpg')
 
+blockSizeGaus = 31
+blockSizeMean = 31
+constantGaus = -25
+constantMean = -25
+
 output = img
-waitTime = 33
+waitTime = 0
 height = 0
 img_count = 0
 while(1):
     if img_count > 116:
         img_count = 0
     file_name = "imgs/img_" + str(img_count) + ".jpg"
-    img = cv2.imread(file_name)
+    img = cv2.imread(file_name, cv2.IMREAD_GRAYSCALE)
+    img_normal = cv2.imread(file_name)
+
+    hMin = cv2.getTrackbarPos('HMin','image')
+    
+    # blockSizeGaus = cv2.getTrackbarPos('blockSizeGaus','image')
+    # blockSizeMean = cv2.getTrackbarPos('blockSizeMean','image')
+    # constantGaus = cv2.getTrackbarPos('constantGaus','image')
+    # constantMean = cv2.getTrackbarPos('constantMean','image')
+    
+    # if blockSizeGaus % 2 == 1:
+    #     print(blockSizeGaus)
+    # elif blockSizeMean % 2 == 1:
+    #     print(blockSizeMean)
+    # elif blockSizeGaus % 2 == 0:
+    #     blockSizeGaus = (blockSizeGaus // 2)  + 1
+    # elif blockSizeMean % 2 == 0:
+    #     blockSizeMean = (blockSizeMean // 2)  + 1
+    
+    img = cv2.medianBlur(img,5)
+    ret,th1 = cv2.threshold(img,127,255,cv2.THRESH_BINARY)
+    print(blockSizeMean)
+    print(blockSizeGaus)
+
+    th2 = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
+                cv2.THRESH_BINARY,blockSizeGaus,constantGaus)
+    th3 = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+                cv2.THRESH_BINARY,blockSizeMean,constantMean)
+    kernel = np.ones((5,5),np.uint8)
+    opening = cv2.morphologyEx(th3, cv2.MORPH_OPEN, kernel)
+    erosion = cv2.erode(th3,kernel,iterations = 1)
+    closing = cv2.morphologyEx(th3,cv2.MORPH_CLOSE,kernel)
 
 
+    # invert image
+    invert = cv2.bitwise_not(th3)
+
+    closing_invert = cv2.morphologyEx(invert, cv2.MORPH_CLOSE, kernel)
+    erosion_invert = cv2.erode(invert,kernel,iterations = 1)
+    
+    contours_invert, _ = cv2.findContours(invert, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    cpy_contours_invert = img_normal.copy()
+
+    cpy_img = img_normal.copy()
+    cpy_img_all = img_normal.copy()
+
+    if len(contours_invert) >=1:
+        cv2.drawContours(cpy_contours_invert, contours_invert, -1, (0,0,255), 5)
+        for contour in contours_invert:
+            if cv2.contourArea(contour) > 100:
+                centroid, dimensions, angle = cv2.minAreaRect(contour)
+                # if (centroid[0] < rows / 2):
+                #     left_contours.append(contour)
+                # else:
+                #     right_contours.append(contour)
+                
+                rect = cv2.minAreaRect(contour)
+                box = cv2.boxPoints(rect)
+                box = np.int0(box)
+                cv2.drawContours(cpy_img,[box],0,(255,0,0),2)
+
+    contours_gauss,_ = cv2.findContours(th3, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+    if len(contours_gauss) >=1:
+        cv2.drawContours(cpy_img_all, contours_gauss, -1, (0,0,255), 5)
+        left_contours = []
+        right_contours = []
+        for contour in contours_gauss:
+            if cv2.contourArea(contour) > 1:
+                centroid, dimensions, angle = cv2.minAreaRect(contour)
+                # if (centroid[0] < rows / 2):
+                #     left_contours.append(contour)
+                # else:
+                #     right_contours.append(contour)
+                
+                rect = cv2.minAreaRect(contour)
+                box = cv2.boxPoints(rect)
+                box = np.int0(box)
+                cv2.drawContours(cpy_img,[box],0,(0,0,255),2)
+    
+    cv2.imshow('Original Image', img)
+    # cv2.imshow('Global Thresholding (v = 127)', th1)
+    cv2.imshow('Adaptive Mean Thresholding', th2)
+    cv2.imshow('Adaptive Gaussian Thresholding', th3)
+    cv2.imshow('Opening', opening)
+    cv2.imshow('Erosion', erosion)
+    cv2.imshow('Closing', closing)
+
+    # cv2.imshow('guassian contours', cpy_img)
+    # cv2.imshow('guassian contours_all', cpy_img_all)
+    # cv2.imshow('invert', invert)
+    # cv2.imshow('closing invert', closing_invert)
+    # cv2.imshow('erosion invert', erosion_invert)
+
+
+    # cv2.imshow('contours invert', cpy_contours_invert)
+
+
+
+
+
+
+    """
     # get current positions of all trackbars
     hMin = cv2.getTrackbarPos('HMin','image')
     sMin = cv2.getTrackbarPos('SMin','image')
@@ -245,13 +359,36 @@ while(1):
     cv2.imshow('rotate rect mask', cpy_img_rt)
     # cv2.imshow('rotate circle mask', cpy_img_circle)
 
+    """
 
     # step through images
     if cv2.waitKey(waitTime) & 0xFF == ord('s'):
         img_count += 1
+    if cv2.waitKey(waitTime) & 0xFF == ord('a'):
+        img_count -= 1    
     # end program
     if cv2.waitKey(waitTime) & 0xFF == ord('q'):
         break
-    
+    if cv2.waitKey(waitTime) & 0xFF == ord('1'):
+        blockSizeGaus += 2
+        blockSizeMean += 2
+        # print("*" * 24)
+        # print("blockSizeGaus: ", blockSizeGaus)
+        # print("blockSizeMean: ", blockSizeMean)
+
+    elif cv2.waitKey(waitTime) & 0xFF == ord('2'):
+        blockSizeGaus -= 2
+        blockSizeMean -= 2
+        print("*" * 24)
+        print("blockSizeGaus: ", blockSizeGaus)
+        print("blockSizeMean: ", blockSizeMean)
+    elif cv2.waitKey(waitTime) & 0xFF == ord('3'):
+        constantGaus += 1
+        constantMean += 1
+    elif cv2.waitKey(waitTime) & 0xFF == ord('4'):
+        constantGaus -= 1
+        constantMean -= 1
+    print("blocksize: ", blockSizeGaus, "\tconstant: ", constantGaus)
+        
 
 cv2.destroyAllWindows()
