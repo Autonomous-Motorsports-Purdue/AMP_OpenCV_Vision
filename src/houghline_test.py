@@ -53,9 +53,9 @@ phMin = psMin = pvMin = phMax = psMax = pvMax = 0
 # img = cv2.imread('img.jpg')
 img = cv2.imread('imgs/img_7.jpg')
 
-blockSizeGaus = 33
+blockSizeGaus = 55
 blockSizeMean = 31
-constantGaus = -20
+constantGaus = -22
 constantMean = -25
 
 output = img
@@ -96,56 +96,9 @@ while(1):
                 cv2.THRESH_BINARY,blockSizeMean,constantMean)
     kernel = np.ones((5,5),np.uint8)
     opening = cv2.morphologyEx(th3, cv2.MORPH_OPEN, kernel)
-    erosion = cv2.erode(th3,kernel,iterations = 1)
+    erosion = cv2.erode(th3,kernel,iterations = 2)
     closing = cv2.morphologyEx(th3,cv2.MORPH_CLOSE,kernel)
 
-
-    # invert image
-    invert = cv2.bitwise_not(th3)
-
-    closing_invert = cv2.morphologyEx(invert, cv2.MORPH_CLOSE, kernel)
-    erosion_invert = cv2.erode(invert,kernel,iterations = 1)
-    
-    contours_invert, _ = cv2.findContours(invert, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    cpy_contours_invert = img_normal.copy()
-
-    cpy_img = img_normal.copy()
-    cpy_img_all = img_normal.copy()
-
-    if len(contours_invert) >=1:
-        cv2.drawContours(cpy_contours_invert, contours_invert, -1, (0,0,255), 5)
-        for contour in contours_invert:
-            if cv2.contourArea(contour) > 100:
-                centroid, dimensions, angle = cv2.minAreaRect(contour)
-                # if (centroid[0] < rows / 2):
-                #     left_contours.append(contour)
-                # else:
-                #     right_contours.append(contour)
-                
-                rect = cv2.minAreaRect(contour)
-                box = cv2.boxPoints(rect)
-                box = np.intp(box)
-                cv2.drawContours(cpy_img,[box],0,(255,0,0),2)
-
-    contours_gauss,_ = cv2.findContours(th3, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
-    if len(contours_gauss) >=1:
-        cv2.drawContours(cpy_img_all, contours_gauss, -1, (0,0,255), 5)
-        left_contours = []
-        right_contours = []
-        for contour in contours_gauss:
-            if cv2.contourArea(contour) > 1:
-                centroid, dimensions, angle = cv2.minAreaRect(contour)
-                # if (centroid[0] < rows / 2):
-                #     left_contours.append(contour)
-                # else:
-                #     right_contours.append(contour)
-                
-                rect = cv2.minAreaRect(contour)
-                box = cv2.boxPoints(rect)
-                box = np.intp(box)
-                cv2.drawContours(cpy_img,[box],0,(0,0,255),2)
-    
     blank_mask = np.zeros_like(img)
     ignore_mask_color = (255,255,255)
     rows, cols = img.shape[:2]
@@ -153,7 +106,7 @@ while(1):
     top_left     = [cols * 0, rows * height]
     bottom_right = [cols * 1, rows * 1 ]
     top_right    = [cols * 1, rows * height]
-    cv2.rectangle(blank_mask, (cols, rows), (0, 460), 255, -1)
+    cv2.rectangle(blank_mask, (cols, rows), (0, 500), 255, -1)
     #vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
     # filling the polygon with white color and generating the final mask
     #cv2.fillPoly(blank_mask, vertices, ignore_mask_color)
@@ -166,7 +119,7 @@ while(1):
     cny1 = cv2.Canny(masked_image, 50, 200, None, 3)
     cdstP = cv2.cvtColor(cny1, cv2.COLOR_GRAY2BGR)
     
-    linesP = cv2.HoughLinesP(masked_image, 1, np.pi / 180, 50, None, 50, 10)
+    linesP = cv2.HoughLinesP(masked_image, 1, np.pi / 180, 50, None, 80, 60)
     
     if linesP is not None:
         for i in range(0, len(linesP)):
