@@ -1,5 +1,7 @@
 # AMP
 
+**I just made a new branch because I wanted to save my code in case it gets deleted when I reinstall ros**
+
 Design and implement an algorithm to process an RGB image from the ZED camera, and output three control values (range of 0-255):
 - Throttle
 - Steering
