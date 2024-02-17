@@ -389,6 +389,5 @@ while(1):
         constantGaus -= 1
         constantMean -= 1
     print("blocksize: ", blockSizeGaus, "\tconstant: ", constantGaus)
-        
 
 cv2.destroyAllWindows()
