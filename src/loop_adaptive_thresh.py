@@ -53,20 +53,67 @@ phMin = psMin = pvMin = phMax = psMax = pvMax = 0
 # img = cv2.imread('img.jpg')
 img = cv2.imread('imgs/img_7.jpg')
 
-blockSizeGaus = 31
-blockSizeMean = 31
+blockSizeGaus = 117
+blockSizeMean = 117
 constantGaus = -25
 constantMean = -25
-
+closing_iterations = 1
+kernel_size = 5
+height = .7
+# 55 -22
+# 31 -25
 output = img
+
 waitTime = 0
 height = 0
 img_count = 0
 while(1):
     if img_count > 116:
         img_count = 0
+    if img_count < 0:
+        img_count = 116
+    
     file_name = "imgs/img_" + str(img_count) + ".jpg"
     img = cv2.imread(file_name, cv2.IMREAD_GRAYSCALE)
+
+
+    blank_mask = np.zeros_like(img)
+    ignore_mask_color = (255,255,255)
+    rows, cols = img.shape[:2]
+    if height < 0:
+        height = 0
+    if height > 1:
+        height = 1
+    bottom_left  = [cols * 0, rows * 1]
+    top_left     = [cols * 0, rows * height]
+    bottom_right = [cols * 1, rows * 1 ]
+    top_right    = [cols * 1, rows * height]
+
+    # smaller mask
+    # top_left     = [cols * 0, rows * 0.7]
+    # top_right    = [cols * 1, rows * 0.7]
+
+
+    vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
+    # filling the polygon with white color and generating the final mask
+    cv2.fillPoly(blank_mask, vertices, ignore_mask_color)
+    cv2.imshow("mask", blank_mask)
+
+
+        
+    # performing Bitwise AND on the input image and mask to get only the edges on the road
+    masked_image = cv2.bitwise_and(img, blank_mask).astype(np.uint8)
+    cv2.imshow("masked_img", masked_image)    
+
+
+
+
+    # eroded = cv2.morphologyEx(masked_image, cv2.MORPH_OPEN, kernel)
+
+    # cv2.imshow("masked_img", masked_image)
+    
+
+
     img_normal = cv2.imread(file_name)
 
     hMin = cv2.getTrackbarPos('HMin','image')
@@ -94,10 +141,20 @@ while(1):
                 cv2.THRESH_BINARY,blockSizeGaus,constantGaus)
     th3 = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
                 cv2.THRESH_BINARY,blockSizeMean,constantMean)
-    kernel = np.ones((5,5),np.uint8)
+    
+
+    th_masked = cv2.adaptiveThreshold(masked_image,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+                cv2.THRESH_BINARY,blockSizeMean,constantMean)
+    
+    if kernel_size < 0:
+        kernel_size = 1
+    kernel = np.ones((kernel_size,kernel_size),np.uint8)
     opening = cv2.morphologyEx(th3, cv2.MORPH_OPEN, kernel)
     erosion = cv2.erode(th3,kernel,iterations = 1)
     closing = cv2.morphologyEx(th3,cv2.MORPH_CLOSE,kernel)
+
+    closing_many = cv2.morphologyEx(th3,cv2.MORPH_CLOSE,kernel, iterations = closing_iterations)
+
 
 
     # invert image
@@ -153,6 +210,11 @@ while(1):
     cv2.imshow('Opening', opening)
     cv2.imshow('Erosion', erosion)
     cv2.imshow('Closing', closing)
+    cv2.imshow('Closing', closing)
+    cv2.imshow('Closing Many', closing_many)
+
+
+    cv2.imshow('masked', th_masked)
 
     # cv2.imshow('guassian contours', cpy_img)
     # cv2.imshow('guassian contours_all', cpy_img_all)
@@ -379,15 +441,29 @@ while(1):
     elif cv2.waitKey(waitTime) & 0xFF == ord('2'):
         blockSizeGaus -= 2
         blockSizeMean -= 2
-        print("*" * 24)
-        print("blockSizeGaus: ", blockSizeGaus)
-        print("blockSizeMean: ", blockSizeMean)
+        # print("*" * 24)
+        # print("blockSizeGaus: ", blockSizeGaus)
+        # print("blockSizeMean: ", blockSizeMean)
     elif cv2.waitKey(waitTime) & 0xFF == ord('3'):
         constantGaus += 1
         constantMean += 1
     elif cv2.waitKey(waitTime) & 0xFF == ord('4'):
         constantGaus -= 1
         constantMean -= 1
-    print("blocksize: ", blockSizeGaus, "\tconstant: ", constantGaus)
+    elif cv2.waitKey(waitTime) & 0xFF == ord('5'):
+        closing_iterations += 1
+    elif cv2.waitKey(waitTime) & 0xFF == ord('6'):
+        closing_iterations -= 1
+    elif cv2.waitKey(waitTime) & 0xFF == ord('7'):
+        kernel_size += 1
+    elif cv2.waitKey(waitTime) & 0xFF == ord('8'):
+        kernel_size -= 1
+    elif cv2.waitKey(waitTime) & 0xFF == ord('9'):
+        height += 0.05
+    elif cv2.waitKey(waitTime) & 0xFF == ord('0'):
+        height -= 0.05
+    print("blocksize: ", blockSizeGaus, "\tconstant: ", constantGaus, "\tclosing iterations: ", closing_iterations, "\tkernel size: ", kernel_size, "\theight: ", height)
+    
+    print(file_name)
 
 cv2.destroyAllWindows()
