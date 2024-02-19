@@ -5,6 +5,9 @@ from matplotlib import pyplot as plt
 def nothing(x):
     pass
 
+def kernelx(x):
+    return np.ones((x,x),np.uint8)
+
 # Create a window
 cv2.namedWindow('image')
 
@@ -19,9 +22,6 @@ cv2.createTrackbar('blockSizeGaus','image',3,400,lambda x: x if x % 2 == 1 else 
 cv2.createTrackbar('blockSizeMean','image',3,400,lambda x: x if x % 2 == 1 else x + 1)
 cv2.createTrackbar('constantGaus','image',-255,255,nothing)
 cv2.createTrackbar('constantMean','image',-255,255,nothing)
-
-
-
 
 # fix trackbar, currently does nothing
 cv2.createTrackbar('Height','image',0,100,nothing)
@@ -53,9 +53,9 @@ phMin = psMin = pvMin = phMax = psMax = pvMax = 0
 # img = cv2.imread('img.jpg')
 img = cv2.imread('imgs/img_7.jpg')
 
-blockSizeGaus = 55
+blockSizeGaus = 61
 blockSizeMean = 31
-constantGaus = -22
+constantGaus = -20
 constantMean = -25
 
 output = img
@@ -85,7 +85,7 @@ while(1):
     # elif blockSizeMean % 2 == 0:
     #     blockSizeMean = (blockSizeMean // 2)  + 1
     
-    img = cv2.medianBlur(img,5)
+    img = cv2.GaussianBlur(img,(5,5),0)
     ret,th1 = cv2.threshold(img,127,255,cv2.THRESH_BINARY)
     print(blockSizeMean)
     print(blockSizeGaus)
@@ -94,39 +94,36 @@ while(1):
                 cv2.THRESH_BINARY,blockSizeGaus,constantGaus)
     th3 = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
                 cv2.THRESH_BINARY,blockSizeMean,constantMean)
-    kernel = np.ones((5,5),np.uint8)
-    opening = cv2.morphologyEx(th3, cv2.MORPH_OPEN, kernel)
-    erosion = cv2.erode(th3,kernel,iterations = 2)
-    closing = cv2.morphologyEx(th3,cv2.MORPH_CLOSE,kernel)
-
+    
     blank_mask = np.zeros_like(img)
     ignore_mask_color = (255,255,255)
     rows, cols = img.shape[:2]
-    bottom_left  = [cols * 0, rows * 1]
-    top_left     = [cols * 0, rows * height]
-    bottom_right = [cols * 1, rows * 1 ]
-    top_right    = [cols * 1, rows * height]
     cv2.rectangle(blank_mask, (cols, rows), (0, 500), 255, -1)
-    #vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
-    # filling the polygon with white color and generating the final mask
-    #cv2.fillPoly(blank_mask, vertices, ignore_mask_color)
 
-    # performing Bitwise AND on the input image and mask to get only the edges on the road
+    masked_image = cv2.bitwise_and(th3, th3, mask = blank_mask)
 
-    masked_image = cv2.bitwise_and(closing, closing, mask = blank_mask)
+    closing = cv2.morphologyEx(masked_image, cv2.MORPH_CLOSE, kernelx(9), iterations = 2)
+    closing = cv2.morphologyEx(closing, cv2.MORPH_CLOSE, kernelx(7))
+    closing = cv2.morphologyEx(closing, cv2.MORPH_CLOSE, kernelx(5))
+
+    #masked_image = cv2.morphologyEx(masked_image,cv2.MORPH_CLOSE,kernel)
+    #masked_image = cv2.morphologyEx(masked_image,cv2.MORPH_CLOSE,kernel)
+    #closing = cv2.morphologyEx(th3,cv2.MORPH_CLOSE,kernel)
     #masked_image = cv2.cvtColor(masked_image, cv2.COLOR_BGR2GRAY)
 
     cny1 = cv2.Canny(masked_image, 50, 200, None, 3)
     cdstP = cv2.cvtColor(cny1, cv2.COLOR_GRAY2BGR)
+    sobel1 = cv2.Sobel(closing, cv2.CV_8UC1, 1, 0, ksize=3)
+    sobel1 = cv2.dilate(sobel1,kernelx(3),iterations = 1)
     
-    linesP = cv2.HoughLinesP(masked_image, 1, np.pi / 180, 50, None, 80, 60)
-    
+    linesP = cv2.HoughLinesP(sobel1, 1, np.pi / 180, 50, None, 80, 50)
+    linesIMG = cv2.cvtColor(sobel1, cv2.COLOR_GRAY2BGR)
     if linesP is not None:
         for i in range(0, len(linesP)):
             l = linesP[i][0]
-            cv2.line(cdstP, (l[0], l[1]), (l[2], l[3]), (0,0,255), 3, cv2.LINE_AA)
+            cv2.line(linesIMG, (l[0], l[1]), (l[2], l[3]), (0,0,255), 3, cv2.LINE_AA)
 
-    cv2.imshow("Detected Lines (in red) - Probabilistic Line Transform", cdstP)
+    cv2.imshow("Detected Lines (in red) - Probabilistic Line Transform", linesIMG)
 
 
 
@@ -134,10 +131,11 @@ while(1):
     # cv2.imshow('Global Thresholding (v = 127)', th1)
     cv2.imshow('Adaptive Mean Thresholding', th2)
     cv2.imshow('Adaptive Gaussian Thresholding', th3)
-    cv2.imshow('Opening', opening)
-    cv2.imshow('Erosion', erosion)
     cv2.imshow('Closing', closing)
     cv2.imshow('Masked', masked_image)
+    cv2.imshow('Sobel', sobel1)
+
+
     cv2.imshow('MASK', blank_mask)
 
     # cv2.imshow('guassian contours', cpy_img)
