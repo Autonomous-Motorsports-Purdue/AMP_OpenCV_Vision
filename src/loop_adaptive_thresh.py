@@ -146,6 +146,7 @@ while(1):
     th_masked = cv2.adaptiveThreshold(masked_image,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
                 cv2.THRESH_BINARY,blockSizeMean,constantMean)
     
+    
     if kernel_size < 0:
         kernel_size = 1
     kernel = np.ones((kernel_size,kernel_size),np.uint8)
@@ -154,7 +155,7 @@ while(1):
     closing = cv2.morphologyEx(th3,cv2.MORPH_CLOSE,kernel)
 
     closing_many = cv2.morphologyEx(th3,cv2.MORPH_CLOSE,kernel, iterations = closing_iterations)
-
+    closing_many_masked = cv2.morphologyEx(th_masked,cv2.MORPH_CLOSE,kernel, iterations = closing_iterations)
 
 
     # invert image
@@ -207,14 +208,16 @@ while(1):
     # cv2.imshow('Global Thresholding (v = 127)', th1)
     cv2.imshow('Adaptive Mean Thresholding', th2)
     cv2.imshow('Adaptive Gaussian Thresholding', th3)
-    cv2.imshow('Opening', opening)
-    cv2.imshow('Erosion', erosion)
-    cv2.imshow('Closing', closing)
-    cv2.imshow('Closing', closing)
-    cv2.imshow('Closing Many', closing_many)
+    # cv2.imshow('Opening', opening)
+    # cv2.imshow('Erosion', erosion)
+    # cv2.imshow('Closing', closing)
+    # cv2.imshow('Closing', closing)
+    # cv2.imshow('Closing Many', closing_many)
 
 
     cv2.imshow('masked', th_masked)
+    cv2.imshow('closing many masked', closing_many_masked)
+    
 
     # cv2.imshow('guassian contours', cpy_img)
     # cv2.imshow('guassian contours_all', cpy_img_all)

@@ -1,9 +1,14 @@
-import numpy as np
 import cv2
-
+import sys
+import numpy as np
+from matplotlib import pyplot as plt
 def nothing(x):
     pass
 
+def kernelx(x):
+    return np.ones((x,x),np.uint8)
+
+# Create a window
 cv2.namedWindow('image')
 
 # create trackbars for color change
@@ -13,6 +18,14 @@ cv2.createTrackbar('VMin','image',0,255,nothing)
 cv2.createTrackbar('HMax','image',0,179,nothing)
 cv2.createTrackbar('SMax','image',0,255,nothing)
 cv2.createTrackbar('VMax','image',0,255,nothing)
+cv2.createTrackbar('blockSizeGaus','image',3,400,lambda x: x if x % 2 == 1 else x + 1)
+cv2.createTrackbar('blockSizeMean','image',3,400,lambda x: x if x % 2 == 1 else x + 1)
+cv2.createTrackbar('constantGaus','image',-255,255,nothing)
+cv2.createTrackbar('constantMean','image',-255,255,nothing)
+
+# fix trackbar, currently does nothing
+cv2.createTrackbar('Height','image',0,100,nothing)
+
 
 # Set default value for MAX HSV trackbars.
 
@@ -24,165 +37,148 @@ cv2.createTrackbar('VMax','image',0,255,nothing)
 # cv2.setTrackbarPos('VMin', 'image', 158)
 
 cv2.setTrackbarPos('HMax', 'image', 179)
-cv2.setTrackbarPos('SMax', 'image', 16)
-cv2.setTrackbarPos('VMax', 'image', 204)
+cv2.setTrackbarPos('SMax', 'image', 26)
+cv2.setTrackbarPos('VMax', 'image', 255)
 
 cv2.setTrackbarPos('VMin', 'image', 158)
+cv2.setTrackbarPos('Height', 'image', 70)
+cv2.setTrackbarPos('Height', 'image', 70)
+
+
 
 # Initialize to check if HSV min/max value changes
 hMin = sMin = vMin = hMax = sMax = vMax = 0
 phMin = psMin = pvMin = phMax = psMax = pvMax = 0
 
-img = cv2.imread('imgs/img_0.jpg')
+# img = cv2.imread('img.jpg')
+img = cv2.imread('imgs/img_7.jpg')
+
+blockSizeGaus = 61
+blockSizeMean = 31
+constantGaus = -20
+constantMean = -25
+
 output = img
-waitTime = 33
-
+waitTime = 0
+height = 1
+img_count = 0
 while(1):
+    if img_count > 116:
+        img_count = 0
+    file_name = "imgs/img_" + str(img_count) + ".jpg"
+    img = cv2.imread(file_name, cv2.IMREAD_GRAYSCALE)
+    img_normal = cv2.imread(file_name)
 
-    # get current positions of all trackbars
     hMin = cv2.getTrackbarPos('HMin','image')
-    sMin = cv2.getTrackbarPos('SMin','image')
-    vMin = cv2.getTrackbarPos('VMin','image')
-
-    hMax = cv2.getTrackbarPos('HMax','image')
-    sMax = cv2.getTrackbarPos('SMax','image')
-    vMax = cv2.getTrackbarPos('VMax','image')
-
-    # Set minimum and max HSV values to display
-    lower = np.array([hMin, sMin, vMin])
-    upper = np.array([hMax, sMax, vMax])
-
-    # Create HSV Image and threshold into a range.
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, lower, upper)
-    output = cv2.bitwise_and(img,img, mask= mask)
-
-    # Print if there is a change in HSV value
-    if( (phMin != hMin) | (psMin != sMin) | (pvMin != vMin) | (phMax != hMax) | (psMax != sMax) | (pvMax != vMax) ):
-        print("(hMin = %d , sMin = %d, vMin = %d), (hMax = %d , sMax = %d, vMax = %d)" % (hMin , sMin , vMin, hMax, sMax , vMax))
-        phMin = hMin
-        psMin = sMin
-        pvMin = vMin
-        phMax = hMax
-        psMax = sMax
-        pvMax = vMax
-
-    # Morphological operations
     
-    kernel = np.ones((3,3), np.uint8)
-    opening = cv2.morphologyEx(output, cv2.MORPH_OPEN, kernel)
-    closing = cv2.morphologyEx(output, cv2.MORPH_CLOSE, kernel)
-    open_and_close = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
+    # blockSizeGaus = cv2.getTrackbarPos('blockSizeGaus','image')
+    # blockSizeMean = cv2.getTrackbarPos('blockSizeMean','image')
+    # constantGaus = cv2.getTrackbarPos('constantGaus','image')
+    # constantMean = cv2.getTrackbarPos('constantMean','image')
+    
+    # if blockSizeGaus % 2 == 1:
+    #     print(blockSizeGaus)
+    # elif blockSizeMean % 2 == 1:
+    #     print(blockSizeMean)
+    # elif blockSizeGaus % 2 == 0:
+    #     blockSizeGaus = (blockSizeGaus // 2)  + 1
+    # elif blockSizeMean % 2 == 0:
+    #     blockSizeMean = (blockSizeMean // 2)  + 1
+    
+    img = cv2.GaussianBlur(img,(5,5),0)
+    ret,th1 = cv2.threshold(img,127,255,cv2.THRESH_BINARY)
+    print(blockSizeMean)
+    print(blockSizeGaus)
 
-
-    # Guassian Blur and Canny Edges
-    gray = cv2.cvtColor(output, cv2.COLOR_BGR2GRAY)
-    kernel_size = 5
-    blur = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
-    low_t = 50
-    high_t = 150
-    edges = cv2.Canny(blur, low_t, high_t)
-
-    cv_image = output.copy()
-
-    # get only bottom region
-    blank_mask = np.zeros_like(cv_image)
+    th2 = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
+                cv2.THRESH_BINARY,blockSizeGaus,constantGaus)
+    th3 = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+                cv2.THRESH_BINARY,blockSizeMean,constantMean)
+    
+    blank_mask = np.zeros_like(img)
     ignore_mask_color = (255,255,255)
-    rows, cols = cv_image.shape[:2]
-    bottom_left  = [cols * 0, rows * 1]
-    top_left     = [cols * 0, rows * 0.6735]
-    bottom_right = [cols * 1, rows * 1 ]
-    top_right    = [cols * 1, rows * 0.6735]
-    vertices = np.array([[bottom_left, top_left, top_right, bottom_right]], dtype=np.int32)
-    # filling the polygon with white color and generating the final mask
-    cv2.fillPoly(blank_mask, vertices, ignore_mask_color)
-    cv2.imshow("mask", blank_mask)
+    rows, cols = img.shape[:2]
+    cv2.rectangle(blank_mask, (cols, rows), (0, 500), 255, -1)
 
+    masked_image = cv2.bitwise_and(th3, th3, mask = blank_mask)
 
-        
-    # performing Bitwise AND on the input image and mask to get only the edges on the road
-    masked_image = cv2.bitwise_and(output, blank_mask).astype(np.uint8)
-    masked_image = cv2.cvtColor(masked_image, cv2.COLOR_BGR2GRAY)
-    
-    # eroded = cv2.morphologyEx(masked_image, cv2.MORPH_OPEN, kernel)
+    closing = cv2.morphologyEx(masked_image, cv2.MORPH_CLOSE, kernelx(9), iterations = 2)
+    closing = cv2.morphologyEx(closing, cv2.MORPH_CLOSE, kernelx(7))
+    closing = cv2.morphologyEx(closing, cv2.MORPH_CLOSE, kernelx(5))
 
-    cv2.imshow("masked_img", masked_image)
-    print(masked_image.dtype)
-    # thresh_image = thresh_image.astype(np.uint8)
+    #masked_image = cv2.morphologyEx(masked_image,cv2.MORPH_CLOSE,kernel)
+    #masked_image = cv2.morphologyEx(masked_image,cv2.MORPH_CLOSE,kernel)
+    #closing = cv2.morphologyEx(th3,cv2.MORPH_CLOSE,kernel)
+    #masked_image = cv2.cvtColor(masked_image, cv2.COLOR_BGR2GRAY)
 
-    contours_canny,_ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    mask_contours, _ = cv2.findContours(masked_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
-    # contours_open,_ = cv2.findContours(opening, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    # contours_close,_ = cv2.findContours(closing, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    # contours_open_and_close,_ = cv2.findContours(open_and_close, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
-    # print(contours)
-    # for contour in contours:
-    #     if len(contour) >= 1:
-    #         print(contour)
-    #         cv2.drawContours(cv_image, [contour], 0, (0,255,0), 5)
-          
-    if len(contours_canny) >=1:
-        cv2.drawContours(cv_image, contours_canny, -1, (0,255,0), 5)
-        for contour in contours_canny:
-            if cv2.contourArea(contour) > 200:
-                print(cv2.contourArea(contour))
-              
-                x,y,w,h = cv2.boundingRect(contour)
-                print("X: " , x , "\tY: ", y, "\tW: " , w ,"\tH: ", h)
-                cv2.rectangle(cv_image, (x,y), (x+w,y+h), (0,0,255), 1)
-
-    cpy_img = output.copy()
-    if len(mask_contours) >=1:
-            cv2.drawContours(cpy_img, mask_contours, -1, (0,255,0), 5)
-            for contour in contours_canny:
-                if cv2.contourArea(contour) > 200:
-                    print(cv2.contourArea(contour))
-                
-                    x,y,w,h = cv2.boundingRect(contour)
-                    print("X: " , x , "\tY: ", y, "\tW: " , w ,"\tH: ", h)
-                    cv2.rectangle(cpy_img, (x,y), (x+w,y+h), (0,0,255), 1)
-
-    # if len(contours_open) >=1:
-    #     cv2.drawContours(opening, contours_open, -1, (0,255,0), 5)
-    # if len(contours_close) >=1:
-    #     cv2.drawContours(closing, contours_close, -1, (0,255,0), 5)
-    # if len(contours_open_and_close) >=1:
-    #     cv2.drawContours(open_and_close, contours_open_and_close, -1, (0,255,0), 5)
-    
-
-    cny1 = cv2.Canny(output, 50, 200, None, 3)
+    cny1 = cv2.Canny(masked_image, 50, 200, None, 3)
     cdstP = cv2.cvtColor(cny1, cv2.COLOR_GRAY2BGR)
+    sobel1 = cv2.Sobel(closing, cv2.CV_8UC1, 1, 0, ksize=3)
+    sobel1 = cv2.dilate(sobel1,kernelx(3),iterations = 1)
     
-    linesP = cv2.HoughLinesP(cny1, 1, np.pi / 180, 50, None, 50, 10)
-    
+    linesP = cv2.HoughLinesP(sobel1, 1, np.pi / 180, 50, None, 80, 50)
+    linesIMG = cv2.cvtColor(sobel1, cv2.COLOR_GRAY2BGR)
     if linesP is not None:
         for i in range(0, len(linesP)):
             l = linesP[i][0]
-            cv2.line(cdstP, (l[0], l[1]), (l[2], l[3]), (0,0,255), 3, cv2.LINE_AA)
+            cv2.line(linesIMG, (l[0], l[1]), (l[2], l[3]), (0,0,255), 3, cv2.LINE_AA)
 
-    cv2.imshow("Detected Lines (in red) - Probabilistic Line Transform", cdstP)
-
-
-    # Display output image
-    cv2.imshow('image',output)
-
-    #cv2.imshow('opening', opening)
-    #cv2.imshow('closing', closing)
-    #cv2.imshow('open_and_close', open_and_close)
-
-    #cv2.imshow('canny', cv_image)
-    # cv2.imshow('mask_canny', cpy_img)
-
-    # cv2.imshow('eroded', eroded)
-    # cv2.imshow('')
-
-    cv2.imshow('canny mask', cpy_img)
+    cv2.imshow("Detected Lines (in red) - Probabilistic Line Transform", linesIMG)
+    cv2.imwrite("HoughLinesP.jpg", linesIMG)
+    cv2.imwrite("base.jpg", img_normal)
 
 
-    # Wait longer to prevent freeze for videos.
+    cv2.imshow('Original Image', img)
+    # cv2.imshow('Global Thresholding (v = 127)', th1)
+    cv2.imshow('Adaptive Mean Thresholding', th2)
+    cv2.imshow('Adaptive Gaussian Thresholding', th3)
+    cv2.imshow('Closing', closing)
+    cv2.imshow('Masked', masked_image)
+    cv2.imshow('Sobel', sobel1)
+
+
+    cv2.imshow('MASK', blank_mask)
+    cv2.imshow("img_normal", img_normal)
+
+
+    # cv2.imshow('guassian contours', cpy_img)
+    # cv2.imshow('guassian contours_all', cpy_img_all)
+    # cv2.imshow('invert', invert)
+    # cv2.imshow('closing invert', closing_invert)
+    # cv2.imshow('erosion invert', erosion_invert)
+
+
+    # cv2.imshow('contours invert', cpy_contours_invert)
+
+
+    # step through images
+    if cv2.waitKey(waitTime) & 0xFF == ord('s'):
+        img_count += 1
+    if cv2.waitKey(waitTime) & 0xFF == ord('a'):
+        img_count -= 1    
+    # end program
     if cv2.waitKey(waitTime) & 0xFF == ord('q'):
         break
+    if cv2.waitKey(waitTime) & 0xFF == ord('1'):
+        blockSizeGaus += 2
+        blockSizeMean += 2
+        # print("*" * 24)
+        # print("blockSizeGaus: ", blockSizeGaus)
+        # print("blockSizeMean: ", blockSizeMean)
+
+    elif cv2.waitKey(waitTime) & 0xFF == ord('2'):
+        blockSizeGaus -= 2
+        blockSizeMean -= 2
+        print("*" * 24)
+        print("blockSizeGaus: ", blockSizeGaus)
+        print("blockSizeMean: ", blockSizeMean)
+    elif cv2.waitKey(waitTime) & 0xFF == ord('3'):
+        constantGaus += 1
+        constantMean += 1
+    elif cv2.waitKey(waitTime) & 0xFF == ord('4'):
+        constantGaus -= 1
+        constantMean -= 1
+    print("blocksize: ", blockSizeGaus, "\tconstant: ", constantGaus)
+        
 
 cv2.destroyAllWindows()
