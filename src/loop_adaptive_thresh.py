@@ -19,8 +19,6 @@ blockSizeGaus = 109
 constantGaus = -29
 closing_iterations = 1
 kernel_size = 3
-# 55 -22
-# 31 -25
 
 waitTime = 0
 img_count = 0
