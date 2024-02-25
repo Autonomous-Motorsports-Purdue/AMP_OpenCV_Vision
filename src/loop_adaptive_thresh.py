@@ -72,6 +72,27 @@ while(1):
     cv2.imshow("OpenOpen", open_open)
 
     sobel1 = cv2.Sobel(open_open, cv2.CV_8UC1, 1, 0, ksize=3)
+    sobel1 = cv2.cvtColor(sobel1, cv2.COLOR_BGR2GRAY)
+
+    open_open = cv2.cvtColor(open_open, cv2.COLOR_BGR2GRAY)
+    contours_open_open,_ = cv2.findContours(open_open, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    cpy_img = cropped_image.copy()
+
+    if len(contours_open_open) >= 1:
+        cv2.drawContours(cropped_image, contours_open_open, -1, (0,255,0), 5)
+        for contour in contours_open_open:
+            print(cv2.contourArea(contour))        
+            x,y,w,h = cv2.boundingRect(contour)
+            print("X: " , x , "\tY: ", y, "\tW: " , w ,"\tH: ", h)
+            cv2.rectangle(cropped_image, (x,y), (x+w,y+h), (0,0,255), 1)
+
+            centroid, dimensions, angle = cv2.minAreaRect(contour)
+            # draw rotated rect
+            # rect = cv2.minAreaRect(contour)
+            # box = cv2.boxPoints(rect)
+            # box = np.int0(box)
+            # cv2.drawContours(cpy_img,[box],0,(0,0,255),2)
+
 
     cv2.imshow('Original Image', img)
     cv2.imshow("Cropped Image", cropped_image)
@@ -80,6 +101,7 @@ while(1):
     cv2.imshow('Opening', opening)
     cv2.imshow('OpenClose', openclose)
     cv2.imshow('Sobel', sobel1)
+    # cv2.imshow('rotated rect', cpy_img)
 
     # cv2.imshow('guassian contours_all', cpy_img_all)
     # cv2.imshow('invert', invert)
