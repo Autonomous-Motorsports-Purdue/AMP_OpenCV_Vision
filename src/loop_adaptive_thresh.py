@@ -4,13 +4,22 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 def kernelx(x):
+    """
+    Returns a square kernel of size x by x.
+    """
     return np.ones((x,x),np.uint8)
 
 def gaussian_threshold(img, blockSize, constant):
+    """
+    Returns an image thresholded using adaptive gaussian thresholding.
+    """
     return cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
                 cv2.THRESH_BINARY,blockSize,constant)
 
 def crop_image(img, crop_top):
+    """
+    Returns an image cropped from the top.
+    """
     rows, cols = img.shape[:2]
     return img[crop_top:rows, 0:cols]
 
@@ -38,43 +47,34 @@ while(1):
     cropped_image = crop_image(img, crop_top)
     cv2.imshow("cropped", cropped_image)
 
+    # Gaussian Thresholding
     gaussian = gaussian_threshold(cropped_image, blockSizeGaus, constantGaus)
     
     opening = cv2.morphologyEx(gaussian,cv2.MORPH_OPEN,kernelx(kernel_size), iterations = closing_iterations)
-    closing_many = cv2.morphologyEx(gaussian,cv2.MORPH_CLOSE,kernelx(kernel_size), iterations = closing_iterations)
     openclose = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernelx(kernel_size), iterations = closing_iterations)
 
-    # sobel1 = cv2.Sobel(openclose, cv2.CV_8UC1, 1, 0, ksize=3)
-    # sobel1 = cv2.dilate(sobel1,kernelx(5),iterations = 1)
-    
-    # linesP = cv2.HoughLinesP(sobel1, 1, np.pi / 180, 50, None, minLineLength=50, maxLineGap=20)
-    # linesIMG = cv2.cvtColor(sobel1, cv2.COLOR_GRAY2BGR)
-    # if linesP is not None:
-    #     for i in range(0, len(linesP)):
-    #         l = linesP[i][0]
-    #         cv2.line(linesIMG, (l[0], l[1]), (l[2], l[3]), (0,0,255), 3, cv2.LINE_AA)
 
-    # cv2.imshow("Detected Lines (in red) - Probabilistic Line Transform", linesIMG)
-
-    linesP2 = cv2.HoughLinesP(openclose, 1, np.pi / 180, 50, None, minLineLength=50, maxLineGap=20)
-    linesIMG2 = cv2.cvtColor(openclose, cv2.COLOR_GRAY2BGR)
+    linesP2 = cv2.HoughLinesP(openclose, 1, np.pi / 180, 50, None, minLineLength=60, maxLineGap=40)
+    lines = cv2.cvtColor(np.zeros_like(openclose), cv2.COLOR_GRAY2BGR)
     if linesP2 is not None:
         for i in range(0, len(linesP2)):
             l = linesP2[i][0]
-            cv2.line(linesIMG2, (l[0], l[1]), (l[2], l[3]), (255,255,255), 3, cv2.LINE_AA)
+            cv2.line(lines, (l[0], l[1]), (l[2], l[3]), (255,255,255), 3, cv2.LINE_AA)
 
+    special_kernel = np.array([[0, 1, 1, 1, 0], [0, 1, 1, 1, 0], [0, 1, 1, 1, 0], [0, 1, 1, 1, 0], [0, 1, 1, 1, 0]], np.uint8)
 
-    im_bw = cv2.threshold(linesIMG2, 127, 255, cv2.THRESH_BINARY)[1]
-    cv2.imshow("OpenCLoselines", im_bw)
+    lines = cv2.threshold(lines, 127, 255, cv2.THRESH_BINARY)[1]
+    lines_or_openclose = cv2.bitwise_or(lines, openclose)
+    lines = cv2.dilate(lines, special_kernel, iterations = 1)
+    lines_dilated = cv2.bitwise_or(lines, openclose)
+    cv2.imshow("OpenCLoselines", lines)
 
-    open_open = cv2.morphologyEx(im_bw, cv2.MORPH_OPEN, kernelx(3), iterations = 2)
-
+    open_open = cv2.morphologyEx(lines_dilated, cv2.MORPH_OPEN, kernelx(3), iterations = 2)
+    open_open = cv2.cvtColor(open_open, cv2.COLOR_BGR2GRAY)
     cv2.imshow("OpenOpen", open_open)
 
     sobel1 = cv2.Sobel(open_open, cv2.CV_8UC1, 1, 0, ksize=3)
-    sobel1 = cv2.cvtColor(sobel1, cv2.COLOR_BGR2GRAY)
 
-    open_open = cv2.cvtColor(open_open, cv2.COLOR_BGR2GRAY)
     contours_open_open,_ = cv2.findContours(open_open, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     cpy_img = cropped_image.copy()
 
@@ -97,7 +97,6 @@ while(1):
     cv2.imshow('Original Image', img)
     cv2.imshow("Cropped Image", cropped_image)
     cv2.imshow('Adaptive Gaussian Thresholding', gaussian)
-    cv2.imshow('Closing Many', closing_many)
     cv2.imshow('Opening', opening)
     cv2.imshow('OpenClose', openclose)
     cv2.imshow('Sobel', sobel1)
