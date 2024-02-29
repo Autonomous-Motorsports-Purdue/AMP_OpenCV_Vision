@@ -91,6 +91,13 @@ def find_two_largest_contours(contours):
     """
     largest_contours = sorted(contours, key=cv2.contourArea, reverse=True)[:2]
     return largest_contours
+
+def crop_to_contour(img, contour):
+    """
+    Returns an image cropped to the contour.
+    """
+    x,y,w,h = cv2.boundingRect(contour)
+    return img[y:y+h, x:x+w]
     
 def kernelx(x):
     """
@@ -105,7 +112,7 @@ def gaussian_threshold(img, blockSize, constant):
     return cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
                 cv2.THRESH_BINARY,blockSize,constant)
 
-def crop_image(img, crop_top):
+def crop_image_top(img, crop_top):
     """
     Returns an image cropped from the top.
     """
@@ -133,7 +140,7 @@ while(1):
     #img = cv2.medianBlur(img,5)
 
     # Crop image to reduce value range and remove sky/background
-    cropped_image = crop_image(img, crop_top)
+    cropped_image = crop_image_top(img, crop_top)
     cv2.imshow("cropped", cropped_image)
 
     # Gaussian Thresholding
@@ -181,7 +188,26 @@ while(1):
             # cv2.drawContours(cpy_img,[box],0,(0,0,255),2)
 
     largest = find_two_largest_contours(contours_open_open)
-    
+
+    contour1 = crop_to_contour(sobel1, largest[0])
+    contour2 = crop_to_contour(sobel1, largest[1])
+
+    contour_points1 = np.transpose(np.nonzero(contour1))
+
+    control_points1 = np.array(get_bezier(contour_points1))
+    print(control_points1)
+    t = np.linspace(0, 1, 100)
+    curve = plot_bezier(t, control_points1)
+
+    plt.plot(curve[:,0], curve[:,1])
+    plt.plot(contour_points1[:,0], contour_points1[:,1], 'ro')
+    plt.plot(control_points1[:,0], control_points1[:,1], 'go')
+    plt.show()
+
+    cv2.imshow('Contour1', contour1)
+    cv2.imshow('Contour2', contour2)
+
+
     cv2.imshow('Original Image', img)
     cv2.imshow("Cropped Image", cropped_image)
     cv2.imshow('Adaptive Gaussian Thresholding', gaussian)

@@ -90,7 +90,7 @@ y= [1, 4, 9, 10]
 
 points = np.array([x, y]).transpose()
 
-points = np.random.rand(5, 2)
+points = np.random.rand(20, 2)
 points.sort(axis=0)
 
 x, y = points[:,0], points[:,1]
