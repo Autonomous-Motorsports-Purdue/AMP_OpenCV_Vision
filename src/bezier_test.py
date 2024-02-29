@@ -61,10 +61,18 @@ def get_bezier(points):
     return list(zip(control_points_x, control_points_y))
 
 def comb(n, k):
+    """
+    Returns the combination of n choose k.
+    """
     return factorial(n) / factorial(k) / factorial(n - k)
 
 def plot_bezier(t, cp):
-    
+    """
+    Plots a bezier curve.
+    t is the time values for the curve.
+    cp is the control points of the curve.
+    return is a tuple of the x and y values of the curve.
+    """
     cp = np.array(cp)
     num_points, d = np.shape(cp)   # Number of points, Dimension of points
     num_points = num_points - 1
@@ -77,8 +85,8 @@ def plot_bezier(t, cp):
     
     return curve
 
-x = [0, 1, 2, 3]
-y= [1, 4, 9, 16]
+x = [0, 1, 2, 1]
+y= [1, 4, 9, 10]
 
 points = np.array([x, y]).transpose()
 
