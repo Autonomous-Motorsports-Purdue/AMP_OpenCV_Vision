@@ -85,6 +85,21 @@ def plot_bezier(t, cp):
     
     return curve
 
+def draw_bezier_curve(img, contour, x_shift):
+    """
+    Draws a bezier curve on the image.
+    """
+    # choose every 8th point so that the bezier curve is not too complex and it's faster
+    contour_points = np.transpose(np.nonzero(contour))[0::8]
+    control_points = np.array(get_bezier(contour_points))
+    t = np.linspace(0, 1, 100)
+    curve = plot_bezier(t, control_points)
+    curve = np.flip(curve, axis=1)
+    curve[:,0] += x_shift
+    cv2.polylines(img, [np.int32(curve)], isClosed=False, color=(255, 255, 255), thickness=2)
+
+    return curve
+
 def find_two_largest_contours(contours):
     """
     Returns the two largest contours in the list of contours.
@@ -164,6 +179,7 @@ while(1):
     lines = cv2.dilate(lines, special_kernel, iterations = 1)
     lines_dilated = cv2.bitwise_or(lines, openclose)
     cv2.imshow("OpenCLoselines", lines)
+    
     open_open = cv2.morphologyEx(lines_dilated, cv2.MORPH_OPEN, kernelx(3), iterations = 2)
     cv2.imshow("OpenOpen", open_open)
 
@@ -192,18 +208,15 @@ while(1):
     contour1 = crop_to_contour(sobel1, largest[0])
     contour2 = crop_to_contour(sobel1, largest[1])
 
-    contour_points1 = np.transpose(np.nonzero(contour1))
+    curves = np.zeros_like(sobel1)
+    curve1 = draw_bezier_curve(curves, contour1, cv2.boundingRect(largest[0])[0])
+    curve2 = draw_bezier_curve(curves, contour2, cv2.boundingRect(largest[1])[0])
+    
 
-    control_points1 = np.array(get_bezier(contour_points1))
-    print(control_points1)
-    t = np.linspace(0, 1, 100)
-    curve = plot_bezier(t, control_points1)
+    midpoint_line = (curve1 + curve2) / 2
 
-    plt.plot(curve[:,0], curve[:,1])
-    plt.plot(contour_points1[:,0], contour_points1[:,1], 'ro')
-    plt.plot(control_points1[:,0], control_points1[:,1], 'go')
-    plt.show()
-
+    cv2.polylines(cropped_image, [np.int32(midpoint_line)], isClosed=False, color=(255, 255, 0), thickness=2)
+    cv2.imshow('curve', curves)
     cv2.imshow('Contour1', contour1)
     cv2.imshow('Contour2', contour2)
 
