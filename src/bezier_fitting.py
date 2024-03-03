@@ -216,6 +216,8 @@ while(1):
     midpoint_line = (curve1 + curve2) / 2
 
     cv2.polylines(cropped_image, [np.int32(midpoint_line)], isClosed=False, color=(255, 255, 0), thickness=2)
+    output_image_and_curve = (img, midpoint_line)
+    print(output_image_and_curve)
     cv2.imshow('curve', curves)
     cv2.imshow('Contour1', contour1)
     cv2.imshow('Contour2', contour2)
