@@ -34,154 +34,158 @@ class Bezier:
         self.crop_top = 500
 
         # figure out how to loop thru images
-        self.img_count = 0
+        self.img_count = 2
         # could have something in the listener that changes the img_count and other parameters
 
-    def normalize_path_length(points):
-        """
-        Returns a list of the normalized path length of the points.
-        """
-        path_length = [0]
-        x, y = points[:,0], points[:,1]
-
-        # calculate the path length
-        for i in range(1, len(points)):
-            path_length.append(np.sqrt((x[i] - x[i - 1])**2 + (y[i] - y[i - 1])**2) + path_length[i - 1])
-        
-        # normalize the path length
-        normal_length = []
-        for i in range(len(path_length)):
-            normal_length.append(path_length[i] / path_length[-1])
-        
-        return normal_length
-
-    def get_bezier(self, points):
-        """
-        Returns the control points of a bezier curve.
-        """
-        num_points = len(points)
-
-        x, y = points[:,0], points[:,1]
-
-        # bezier matrix for a cubic curve
-        bezier_matrix = np.array([[-1, 3, -3, 1,], [3, -6, 3, 0], [-3, 3, 0, 0], [1, 0, 0, 0]])
-        bezier_inverse = np.linalg.inv(bezier_matrix)
-
-        normalized_length = self.normalize_path_length(points)
-
-        points_matrix = np.zeros((num_points, 4))
-
-        for i in range(num_points):
-            points_matrix[i] = [normalized_length[i]**3, normalized_length[i]**2, normalized_length[i], 1]
-
-        points_transpose = points_matrix.transpose()
-        square_points = np.matmul(points_transpose, points_matrix)
-
-        square_inverse = np.zeros_like(square_points)
-
-        if (np.linalg.det(square_points) == 0):
-            print("Uninvertible matrix")
-            square_inverse = np.linalg.pinv(square_points)
-        else:
-            square_inverse = np.linalg.inv(square_points)
-
-        # solve for the solution matrix
-        solution = np.matmul(np.matmul(bezier_inverse, square_inverse), points_transpose)
-
-        # solve for the control points
-        control_points_x = np.matmul(solution, x)
-        control_points_y = np.matmul(solution, y)
-
-        return list(zip(control_points_x, control_points_y))
-
-    def comb(n, k):
-        """
-        Returns the combination of n choose k.
-        """
-        return factorial(n) / factorial(k) / factorial(n - k)
-
-    def plot_bezier(self, t, cp):
-        """
-        Plots a bezier curve.
-        t is the time values for the curve.
-        cp is the control points of the curve.
-        return is a tuple of the x and y values of the curve.
-        """
-        cp = np.array(cp)
-        num_points, d = np.shape(cp)   # Number of points, Dimension of points
-        num_points = num_points - 1
-        curve = np.zeros((len(t), d))
-        
-        for i in range(num_points+1):
-            # Bernstein polynomial
-            val = self.comb(num_points,i) * t**i * (1.0-t)**(num_points-i)
-            curve += np.outer(val, cp[i])
-        
-        return curve
-
-    def draw_bezier_curve(self, img, contour, x_shift):
-        """
-        Draws a bezier curve on the image.
-        """
-        # choose every 8th point so that the bezier curve is not too complex and it's faster
-        contour_points = np.transpose(np.nonzero(contour))[0::8]
-        control_points = np.array(self.get_bezier(contour_points))
-        t = np.linspace(0, 1, 100)
-        curve = self.plot_bezier(t, control_points)
-        curve = np.flip(curve, axis=1)
-        curve[:,0] += x_shift
-        cv2.polylines(img, [np.int32(curve)], isClosed=False, color=(255, 255, 255), thickness=2)
-
-        return curve
-
-    def find_two_largest_contours(contours):
-        """
-        Returns the two largest contours in the list of contours.
-        """
-        largest_contours = sorted(contours, key=cv2.contourArea, reverse=True)[:2]
-        return largest_contours
-
-    def crop_to_contour(img, contour):
-        """
-        Returns an image cropped to the contour.
-        """
-        x,y,w,h = cv2.boundingRect(contour)
-        return img[y:y+h, x:x+w]
-        
-    def kernelx(x):
-        """
-        Returns a square kernel of size x by x.
-        """
-        return np.ones((x,x),np.uint8)
-
-    def gaussian_threshold(img, blockSize, constant):
-        """
-        Returns an image thresholded using adaptive gaussian thresholding.
-        """
-        return cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
-                    cv2.THRESH_BINARY,blockSize,constant)
-
-    def crop_image_top(img, crop_top):
-        """
-        Returns an image cropped from the top.
-        """
-        rows, cols = img.shape[:2]
-        return img[crop_top:rows, 0:cols]
-
     def get_bezier_data(self):
+        def normalize_path_length(points):
+            """
+            Returns a list of the normalized path length of the points.
+            """
+            path_length = [0]
+            x, y = points[:,0], points[:,1]
+
+            # calculate the path length
+            for i in range(1, len(points)):
+                path_length.append(np.sqrt((x[i] - x[i - 1])**2 + (y[i] - y[i - 1])**2) + path_length[i - 1])
+            
+            # normalize the path length
+            # computes the percentage of path length at each point
+            pct_len = []
+            for i in range(len(path_length)):
+                if (path_length[i] == 0):
+                    pct_len.append(0.01)
+                    continue
+                pct_len.append(path_length[i] / path_length[-1])
+            
+            return pct_len
+
+        def get_bezier(points):
+            """
+            Returns the control points of a bezier curve.
+            """
+            num_points = len(points)
+
+            x, y = points[:,0], points[:,1]
+
+            # bezier matrix for a cubic curve
+            bezier_matrix = np.array([[-1, 3, -3, 1,], [3, -6, 3, 0], [-3, 3, 0, 0], [1, 0, 0, 0]])
+            bezier_inverse = np.linalg.inv(bezier_matrix)
+
+            normalized_length = normalize_path_length(points)
+
+            points_matrix = np.zeros((num_points, 4))
+
+            for i in range(num_points):
+                points_matrix[i] = [normalized_length[i]**3, normalized_length[i]**2, normalized_length[i], 1]
+
+            points_transpose = points_matrix.transpose()
+            square_points = np.matmul(points_transpose, points_matrix)
+
+            square_inverse = np.zeros_like(square_points)
+
+            if (np.linalg.det(square_points) == 0):
+                print("Uninvertible matrix")
+                square_inverse = np.linalg.pinv(square_points)
+            else:
+                square_inverse = np.linalg.inv(square_points)
+
+            # solve for the solution matrix
+            solution = np.matmul(np.matmul(bezier_inverse, square_inverse), points_transpose)
+
+            # solve for the control points
+            control_points_x = np.matmul(solution, x)
+            control_points_y = np.matmul(solution, y)
+
+            return list(zip(control_points_x, control_points_y))
+
+        def comb(n, k):
+            """
+            Returns the combination of n choose k.
+            """
+            return factorial(n) / factorial(k) / factorial(n - k)
+
+        def plot_bezier(t, cp):
+            """
+            Plots a bezier curve.
+            t is the time values for the curve.
+            cp is the control points of the curve.
+            return is a tuple of the x and y values of the curve.
+            """
+            cp = np.array(cp)
+            num_points, d = np.shape(cp)   # Number of points, Dimension of points
+            num_points = num_points - 1
+            curve = np.zeros((len(t), d))
+            
+            for i in range(num_points+1):
+                # Bernstein polynomial
+                val = comb(num_points,i) * t**i * (1.0-t)**(num_points-i)
+                curve += np.outer(val, cp[i])
+            
+            return curve
+
+        def draw_bezier_curve(img, contour, x_shift):
+            """
+            Draws a bezier curve on the image.
+            """
+            # choose every 8th point so that the bezier curve is not too complex and it's faster
+            contour_points = np.transpose(np.nonzero(contour))[0::8]
+            control_points = np.array(get_bezier(contour_points))
+            t = np.linspace(0, 1, 40)
+            curve = plot_bezier(t, control_points)
+            curve = np.flip(curve, axis=1)
+            curve[:,0] += x_shift
+            cv2.polylines(img, [np.int32(curve)], isClosed=False, color=(255, 255, 255), thickness=2)
+
+            return curve
+
+        def find_two_largest_contours(contours):
+            """
+            Returns the two largest contours in the list of contours.
+            """
+            largest_contours = sorted(contours, key=cv2.contourArea, reverse=True)[:2]
+            return largest_contours
+
+        def crop_to_contour(img, contour):
+            """
+            Returns an image cropped to the contour.
+            """
+            x,y,w,h = cv2.boundingRect(contour)
+            return img[y:y+h, x:x+w]
+            
+        def kernelx(x):
+            """
+            Returns a square kernel of size x by x.
+            """
+            return np.ones((x,x),np.uint8)
+
+        def gaussian_threshold(img, blockSize, constant):
+            """
+            Returns an image thresholded using adaptive gaussian thresholding.
+            """
+            return cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+                        cv2.THRESH_BINARY,blockSize,constant)
+
+        def crop_image_top(img, crop_top):
+            """
+            Returns an image cropped from the top.
+            """
+            rows, cols = img.shape[:2]
+            return img[crop_top:rows, 0:cols]
+        # output_image_and_curve = (img, midpoint_line)
         img_normal = cv2.imread(f'imgs/img_{self.img_count}.jpg')
         img = cv2.cvtColor(img_normal, cv2.COLOR_BGR2GRAY)
         #img = cv2.medianBlur(img,5)
 
         # Crop image to reduce value range and remove sky/background
-        cropped_image = self.crop_image_top(img, self.crop_top)
-        cv2.imshow("cropped", cropped_image)
+        cropped_image = crop_image_top(img, self.crop_top)
+        # cv2.imshow("cropped", cropped_image)
 
         # Gaussian Thresholding
-        gaussian = self.gaussian_threshold(cropped_image, self.blockSizeGaus, self.constantGaus)
+        gaussian = gaussian_threshold(cropped_image, self.blockSizeGaus, self.constantGaus)
         
-        opening = cv2.morphologyEx(gaussian,cv2.MORPH_OPEN,self.kernelx(self.kernel_size), iterations = self.closing_iterations)
-        openclose = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, self.kernelx(self.kernel_size), iterations = self.closing_iterations)
+        opening = cv2.morphologyEx(gaussian,cv2.MORPH_OPEN,kernelx(self.kernel_size), iterations = self.closing_iterations)
+        openclose = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernelx(self.kernel_size), iterations = self.closing_iterations)
 
 
         linesP2 = cv2.HoughLinesP(openclose, 1, np.pi / 180, 50, None, minLineLength=60, maxLineGap=40)
@@ -199,7 +203,7 @@ class Bezier:
         lines_dilated = cv2.bitwise_or(lines, openclose)
         # cv2.imshow("OpenCLoselines", lines)
         
-        open_open = cv2.morphologyEx(lines_dilated, cv2.MORPH_OPEN, self.kernelx(3), iterations = 2)
+        open_open = cv2.morphologyEx(lines_dilated, cv2.MORPH_OPEN, kernelx(3), iterations = 2)
         # cv2.imshow("OpenOpen", open_open)
 
         sobel1 = cv2.Sobel(open_open, cv2.CV_8UC1, 1, 0, ksize=3)
@@ -222,41 +226,40 @@ class Bezier:
                 # box = np.int0(box)
                 # cv2.drawContours(cpy_img,[box],0,(0,0,255),2)
 
-        largest = self.find_two_largest_contours(contours_open_open)
+        largest = find_two_largest_contours(contours_open_open)
 
-        contour1 = self.crop_to_contour(sobel1, largest[0])
-        contour2 = self.crop_to_contour(sobel1, largest[1])
+        contour1 = crop_to_contour(sobel1, largest[0])
+        contour2 = crop_to_contour(sobel1, largest[1])
 
         curves = np.zeros_like(sobel1)
-        curve1 = self.draw_bezier_curve(curves, contour1, cv2.boundingRect(largest[0])[0])
-        curve2 = self.draw_bezier_curve(curves, contour2, cv2.boundingRect(largest[1])[0])
+        curve1 = draw_bezier_curve(curves, contour1, cv2.boundingRect(largest[0])[0])
+        curve2 = draw_bezier_curve(curves, contour2, cv2.boundingRect(largest[1])[0])
         
 
         midpoint_line = (curve1 + curve2) / 2
 
         cv2.polylines(cropped_image, [np.int32(midpoint_line)], isClosed=False, color=(255, 255, 0), thickness=2)
-        output_image_and_curve = (img, midpoint_line)
-        return output_image_and_curve
-    
-        # print(output_image_and_curve)
-        
         # cv2.imshow('curve', curves)
         # cv2.imshow('Contour1', contour1)
         # cv2.imshow('Contour2', contour2)
 
 
-        # cv2.imshow('Original Image', img)
+        cv2.imshow('Original Image', img)
         # cv2.imshow("Cropped Image", cropped_image)
         # cv2.imshow('Adaptive Gaussian Thresholding', gaussian)
         # cv2.imshow('Opening', opening)
         # cv2.imshow('OpenClose', openclose)
         # cv2.imshow('Sobel', sobel1)
-
+        print(img.shape)
+        print(img)
+        return img, midpoint_line
 
 
     
+    
 if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer
-
+    import rpyc
+    rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
     t = ThreadedServer(BezierTalker, port=9001)
     t.start()
