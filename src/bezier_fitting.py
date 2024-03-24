@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
 from math import factorial
 
 def normalize_path_length(points):
@@ -15,11 +14,15 @@ def normalize_path_length(points):
         path_length.append(np.sqrt((x[i] - x[i - 1])**2 + (y[i] - y[i - 1])**2) + path_length[i - 1])
     
     # normalize the path length
-    normal_length = []
+    # computes the percentage of path length at each point
+    pct_len = []
     for i in range(len(path_length)):
-        normal_length.append(path_length[i] / path_length[-1])
+        if (path_length[i] == 0):
+            pct_len.append(0.01)
+            continue
+        pct_len.append(path_length[i] / path_length[-1])
     
-    return normal_length
+    return pct_len
 
 def get_bezier(points):
     """
@@ -92,7 +95,7 @@ def draw_bezier_curve(img, contour, x_shift):
     # choose every 8th point so that the bezier curve is not too complex and it's faster
     contour_points = np.transpose(np.nonzero(contour))[0::8]
     control_points = np.array(get_bezier(contour_points))
-    t = np.linspace(0, 1, 100)
+    t = np.linspace(0, 1, 40)
     curve = plot_bezier(t, control_points)
     curve = np.flip(curve, axis=1)
     curve[:,0] += x_shift
