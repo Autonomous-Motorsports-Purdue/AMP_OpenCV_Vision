@@ -112,10 +112,16 @@ def find_two_largest_contours(contours):
 
 def crop_to_contour(img, contour):
     """
-    Returns an image cropped to the contour.
+    Returns an image cropped and masked to the contour.
     """
     x,y,w,h = cv2.boundingRect(contour)
-    return img[y:y+h, x:x+w]
+    rect = np.intp(cv2.boxPoints(cv2.minAreaRect(contour)))
+    crop = img[y:y+h, x:x+w]
+    mask = np.zeros_like(crop)
+    rect = rect - np.array([x, y])
+    cv2.drawContours(mask,[rect], 0, 255, -1)
+    cv2.imshow("mask", mask)
+    return cv2.bitwise_and(crop, mask)
     
 def kernelx(x):
     """
@@ -197,19 +203,21 @@ while(1):
             #print(cv2.contourArea(contour))        
             x,y,w,h = cv2.boundingRect(contour)
             #print("X: " , x , "\tY: ", y, "\tW: " , w ,"\tH: ", h)
-            cv2.rectangle(cropped_image, (x,y), (x+w,y+h), (0,0,255), 1)
+            #cv2.rectangle(cropped_image, (x,y), (x+w,y+h), (0,0,255), 1)
 
             centroid, dimensions, angle = cv2.minAreaRect(contour)
             # draw rotated rect
             # rect = cv2.minAreaRect(contour)
             # box = cv2.boxPoints(rect)
             # box = np.int0(box)
-            # cv2.drawContours(cpy_img,[box],0,(0,0,255),2)
+            # cv2.drawContours(cropped_image,[box],0,(0,0,255),2)
 
     largest = find_two_largest_contours(contours_open_open)
 
     contour1 = crop_to_contour(sobel1, largest[0])
     contour2 = crop_to_contour(sobel1, largest[1])
+    # rect1 = cv2.boxPoints(cv2.minAreaRect(contour1))
+    # rect2 = cv2.boxPoints(cv2.minAreaRect(contour2))
 
     curves = np.zeros_like(sobel1)
     curve1 = draw_bezier_curve(curves, contour1, cv2.boundingRect(largest[0])[0])
