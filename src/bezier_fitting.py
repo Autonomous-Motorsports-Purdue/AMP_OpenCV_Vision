@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from math import factorial
-rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
+# rpyc.core.protocol.DEFAULT_CONFIG['allow_pickle'] = True
 def normalize_path_length(points):
     """
     Returns a list of the normalized path length of the points.

@@ -174,6 +174,12 @@ class Bezier:
             return img[crop_top:rows, 0:cols]
         # output_image_and_curve = (img, midpoint_line)
         img_normal = cv2.imread(f'imgs/img_{self.img_count}.jpg')
+        img = cv2.imread("img.jpg")
+        # cv2.imshow("first img normal", img_normal)
+        ret_img = img_normal
+        retval, buf = cv2.imencode(".JPEG", img_normal)
+        return np.array(buf).tobytes()
+
         img = cv2.cvtColor(img_normal, cv2.COLOR_BGR2GRAY)
         #img = cv2.medianBlur(img,5)
 
@@ -243,6 +249,7 @@ class Bezier:
         # cv2.imshow('Contour1', contour1)
         # cv2.imshow('Contour2', contour2)
 
+        test_img = cv2.imread(f'imgs/img_{self.img_count}.jpg')
 
         cv2.imshow('Original Image', img)
         # cv2.imshow("Cropped Image", cropped_image)
@@ -250,9 +257,13 @@ class Bezier:
         # cv2.imshow('Opening', opening)
         # cv2.imshow('OpenClose', openclose)
         # cv2.imshow('Sobel', sobel1)
+
+        # cv2.imshow('test img', test_img)
+        cv2.imshow('ret img', ret_img)
+
         print(img.shape)
         print(img)
-        return img, midpoint_line
+        return ret_img, midpoint_line
 
 
     
