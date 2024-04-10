@@ -8,18 +8,37 @@ if __name__ == "__main__":
     print("Listener Connected")
     while True:
         # img, curve = c.root.get_bezier()
-        img = c.root.get_bezier()
+        img_bytes, curve = c.root.get_bezier()
         # img2 = np.array(img)
         # img = np.array(img)
-        if img is not None:
+        if img_bytes is not None:
+            binary_file = open("blistener.txt", "wb")
+            binary_file.write(img_bytes)
+            binary_file.close()
+
+            # print(img_bytes)
+
             # print(img)
+            np_arr = np.frombuffer(img_bytes, np.uint8)
+            np_copy = np_arr.copy()
+            img = cv2.imdecode(np_copy, cv2.IMREAD_COLOR)
             # img = np.copy(np.array(img))
-            ac_img = cv2.imdecode(np.frombuffer(img, dtype=np.uint8), cv2.IMREAD_COLOR)
+
+            # print(img)
+
+            # cv2.imwrite("talk/img.jpg", img)
+            cv2.imshow("img", img)
+
+            # ac_img = cv2.imdecode(np.frombuffer(img, dtype=np.uint8), cv2.IMREAD_COLOR)
             # np.savetxt('test.out', img)
             # print(img)
             # arr = np.loadtxt('test.out')
-            print(ac_img)
-            cv2.imshow("listener img", ac_img)
+            # print(ac_img)
+            # cv2.imshow("listener img", ac_img)
+
+            # cv2.imshow("listenre img", img)
+        if curve is not None:
+            print(curve)
 
         """
         if img2 is not None:

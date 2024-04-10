@@ -15,11 +15,13 @@ class VideoTalker(rpyc.Service):
         return self.video.get_video_data()
 class Video:
     def __init__(self):
-        self.vid = cv2.VideoCapture(0)
+        # self.vid = cv2.VideoCapture(0)
+        self.thing = 1
     def get_video_data(self):
-        ret, frame = self.vid.read()
-        cv2.imshow('frame', frame)
-        return frame
+        # ret, frame = self.vid.read()
+        img = cv2.imread("img.jpg")
+        cv2.imshow('frame', img)
+        return img
         
 
 

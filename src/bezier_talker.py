@@ -172,14 +172,12 @@ class Bezier:
             """
             rows, cols = img.shape[:2]
             return img[crop_top:rows, 0:cols]
+        # cv2.destroyAllWindows()
         # output_image_and_curve = (img, midpoint_line)
         img_normal = cv2.imread(f'imgs/img_{self.img_count}.jpg')
         img = cv2.imread("img.jpg")
         # cv2.imshow("first img normal", img_normal)
         ret_img = img_normal
-        retval, buf = cv2.imencode(".JPEG", img_normal)
-        return np.array(buf).tobytes()
-
         img = cv2.cvtColor(img_normal, cv2.COLOR_BGR2GRAY)
         #img = cv2.medianBlur(img,5)
 
@@ -260,10 +258,13 @@ class Bezier:
 
         # cv2.imshow('test img', test_img)
         cv2.imshow('ret img', ret_img)
-
+        img_bytes = cv2.imencode('.jpg', img)[1].tobytes()
+        binary_file = open("btalk.txt", "wb")
+        binary_file.write(img_bytes)
+        binary_file.close()
         print(img.shape)
         print(img)
-        return ret_img, midpoint_line
+        return img_bytes, midpoint_line
 
 
     

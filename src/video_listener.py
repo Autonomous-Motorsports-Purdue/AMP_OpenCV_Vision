@@ -8,5 +8,5 @@ if __name__ == "__main__":
         img = c.root.get_image()
         if img is not None:
             print(img)
-            cv2.imshow("sent image", img)
-        time.sleep(1)
+            # cv2.imshow("sent image", img)
+        time.sleep(2)
