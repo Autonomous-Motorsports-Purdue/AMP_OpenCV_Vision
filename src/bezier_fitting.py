@@ -217,6 +217,16 @@ while(1):
     
 
     midpoint_line = (curve1 + curve2) / 2
+    
+    #control points
+    control_points = get_bezier(midpoint_line)
+    print("controlPoints:")
+
+    print(control_points)
+    for point in control_points:
+        print(point[0], point[1]+500)
+        cv2.circle(img, (int(point[0]), int(point[1])+500), 10, (0,0,255), -1)
+        # print(point)
 
     cv2.polylines(cropped_image, [np.int32(midpoint_line)], isClosed=False, color=(255, 255, 0), thickness=2)
     cv2.imshow('curve', curves)

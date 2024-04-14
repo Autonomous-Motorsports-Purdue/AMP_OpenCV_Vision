@@ -8,7 +8,7 @@ if __name__ == "__main__":
     print("Listener Connected")
     while True:
         # img, curve = c.root.get_bezier()
-        img_bytes, curve = c.root.get_bezier()
+        img_bytes, curve, control_points = c.root.get_bezier()
         # img2 = np.array(img)
         # img = np.array(img)
         if img_bytes is not None:
